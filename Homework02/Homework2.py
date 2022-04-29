@@ -2,48 +2,79 @@ import numpy as np
 from os import system
 
 class Maze:
-    """"""
+    """Generate mazes using the reverse backtracking algorithm"""
     def __init__(self, size):
         self.size = size
+        # the maze is represented by a 2D-array
+        # 1: wall, 0: path
+        # initially, all tiles are set to 1
         self.tiles = [[1 for x in range(self.size)] for y in range(self.size)]
         self.tiles = np.array(self.tiles)
-        
+
+    # a method to set wall tiles to be path tiles
+    # the maze is created by 'digging' through the walls
     def dig(self, x, y): 
         self.tiles[y][x] = 0
-        
+    
+    # a method to check whether a tile has not been visited before by the maze generation algorithm
     def is_diggable(self, x, y):
+        # check if (y,x) is in bounds
         if 0 <= x < self.size and 0 <= y < self.size:
+            # if in bounds, has the tile not been visited before?
             return self.tiles[y][x] == 1 
         else:
             return False
-        
+    
+    # the maze generation algorithm
+    # a recursive method for digging paths 
     def dig_maze(self, x, y):
+        # excavate the current position
         self.dig(x, y)
+        
+        # left, right, up, down
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         np.random.shuffle(directions)
+        
+        # in random order, check each direction...
         while len(directions) > 0:
             direction = directions.pop()
-            #next_tile = tuple(map(lambda i, j: i + j, tile, next_direction))
-            next_x = x + (direction[0] * 2)
-            next_y = y + (direction[1] * 2)
-            if self.is_diggable(next_x, next_y):
+            target_x = x + (direction[0] * 2)
+            target_y = y + (direction[1] * 2)
+            # ... and if the target tile is a valid destination...
+            if self.is_diggable(target_x, target_y):
+                # ... dig a path to the target location
                 self.dig(x + direction[0], y + direction[1])
-                self.dig_maze(next_x, next_y)
+                # recursion
+                self.dig_maze(target_x, target_y)
         return self.tiles 
 
 class Gridworld:
-    """"""
-    
+    """Creates an environment for the agent to interact with"""
     def __init__(self, size):
-        self.grid = np.append(MazeMaker(size).dig_maze(0,0),MazeMaker(size).dig_maze(-0,-0), axis=1)
-        #self.grid = np.repeat(np.repeat(self.grid,2, axis=0), 2, axis=1)
+        # generate two mazes, one starting from the top left and one starting from the bottom right
+        # then stick them together
+        # 'size' needs to be an odd integer, otherwise the agent won't be able to reach the goal!
+        self.grid = np.append(Maze(size).dig_maze(0,0),Maze(size).dig_maze(-0,-0), axis=1)
+        #
+        self.grid = np.repeat(np.repeat(self.grid,2,axis=0),2,axis=1)
+        # place boundaries so that the agent doesn't escaoe
         self.grid = np.pad(self.grid, (1,1), 'constant', constant_values=(1,1))
+        # create a list of all path tile coordinates
         self.paths = []
         for i in range(size):
             for j in range(size*2):
                 if self.grid[i,j] == 0:
                     self.paths.append([i,j])
-        self.special_paths = np.random.choice(self.paths, size=len(self.paths)//10, replace=False)
+        
+        # choose 10% percent of path tiles to be turned into special tiles
+        sample = np.random.choice(len(self.paths),len(self.paths)//10, replace=False)
+        # create a list of all special tile coordinates
+        self.special_paths = [self.paths[x] for x in sample]
+        # change path tiles into special tiles
+        for i in self.special_paths:
+            special_x = i[0]
+            special_y = i[1]
+            self.grid[special_x, special_y] = 3
                 
         
         self.start = (1,1)
@@ -59,27 +90,31 @@ class Gridworld:
         treasure = 100
         reward = 0
         terminal = False
+        
+        if self.grid[self.y,self.x] == 3:
+            action = np.random.choice(['left','right','up','down'], p=[0.25,0.25,0.25,0.25])
+        
         if action == 'left':
             #self.position = tuple(map(lambda i, j: i + j, self.position, (0,-1)))
-            if self.grid[self.y,self.x-1] == 0:
+            if self.grid[self.y,self.x-1] == 0 or self.grid[self.y,self.x-1] == 3:
                 self.x -= 1
             else:
                 reward += collision
         elif action == 'right':
             #self.position = tuple(map(lambda i, j: i + j, self.position, (0,1)))
-            if self.grid[self.y,self.x+1] == 0:
+            if self.grid[self.y,self.x+1] == 0 or self.grid[self.y,self.x+1] == 3:
                 self.x += 1
             else:
                 reward += collision
         elif action == 'up':
             #self.position = tuple(map(lambda i, j: i + j, self.position, (-1,0)))
-            if self.grid[self.y-1,self.x] == 0:
+            if self.grid[self.y-1,self.x] == 0 or self.grid[self.y-1,self.x] == 3:
                 self.y -= 1
             else:
                 reward += collision
         elif action == 'down':
             #self.position = tuple(map(lambda i, j: i + j, self.position, (1,0)))
-            if self.grid[self.y+1,self.x] == 0:
+            if self.grid[self.y+1,self.x] == 0 or self.grid[self.y+1,self.x] == 3:
                 self.y += 1
             else:
                 reward += collision
@@ -115,11 +150,14 @@ class Gridworld:
             y,x,r,t = self.step(action)
             reward += r
 
+            
+class Agent():
+    """"""
+    
 grid = Gridworld(7)
 print(grid.paths)
-print(grid.paths.type)
-print(grid.special_paths)
-#grid.play()
+#print(grid.special_paths)
+grid.play()
 
 
 
