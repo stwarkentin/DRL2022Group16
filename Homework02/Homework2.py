@@ -70,15 +70,16 @@ class Gridworld:
         sample = np.random.choice(len(self.paths),len(self.paths)//10, replace=False)
         # create a list of all special tile coordinates
         self.special_paths = [self.paths[x] for x in sample]
-        # change path tiles into special tiles
+        # set path tiles to special tiles
         for i in self.special_paths:
             special_x = i[0]
             special_y = i[1]
             self.grid[special_x, special_y] = 3
                 
-        
+        # define start position as top-left corner
         self.start = (1,1)
         self.y, self.x = self.start
+        # define terminal state as bottom-right corner
         self.end = (size,size*2)
         
     def reset(self):
@@ -86,51 +87,61 @@ class Gridworld:
         return self.y, self.x
     
     def step(self,action):
+        # rewards
         collision = -1
         treasure = 100
+        # stuff the function returns later
         reward = 0
         terminal = False
         
+        # if the current tile is a special tile
         if self.grid[self.y,self.x] == 3:
+            # pick a random direction to walk in
             action = np.random.choice(['left','right','up','down'], p=[0.25,0.25,0.25,0.25])
+            # teleport to a random special tile?
+            # teleport through adjacent wall?
         
+        # actions are passed as strings
         if action == 'left':
             #self.position = tuple(map(lambda i, j: i + j, self.position, (0,-1)))
+            # if the target is not a wall, move to the target
             if self.grid[self.y,self.x-1] == 0 or self.grid[self.y,self.x-1] == 3:
                 self.x -= 1
+            # if the target is a wall, give a negative reward
             else:
                 reward += collision
         elif action == 'right':
-            #self.position = tuple(map(lambda i, j: i + j, self.position, (0,1)))
             if self.grid[self.y,self.x+1] == 0 or self.grid[self.y,self.x+1] == 3:
                 self.x += 1
             else:
                 reward += collision
         elif action == 'up':
-            #self.position = tuple(map(lambda i, j: i + j, self.position, (-1,0)))
             if self.grid[self.y-1,self.x] == 0 or self.grid[self.y-1,self.x] == 3:
                 self.y -= 1
             else:
                 reward += collision
         elif action == 'down':
-            #self.position = tuple(map(lambda i, j: i + j, self.position, (1,0)))
             if self.grid[self.y+1,self.x] == 0 or self.grid[self.y+1,self.x] == 3:
                 self.y += 1
             else:
                 reward += collision
         
+        # if the new state is the terminal state, give a positive reward reward and set boolean to True
         if (self.y, self.x) == self.end:
             reward += treasure
             terminal = True
         
         return self.y, self.x, reward, terminal
     
+    # a method for printing the gridworld
     def visualize(self):
             visualization = self.grid.copy()
             # represent the agent
             visualization[self.y, self.x] = 2
             print(visualization)
-
+    
+    # a method for assuming manual control of the agent
+    # might move this to the agent class later? We could play one episode and then let the agent take over just to see what happens
     def play(self):
         input_directions = {
             'w': 'up',
